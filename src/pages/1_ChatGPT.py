@@ -1,17 +1,8 @@
 import streamlit as st
-import os
 import pandas as pd 
 from myopenai import Gpt, sidebar_api_input
-import json
-import numpy as np
-import streamlit as st
-from io import BytesIO
-import streamlit.components.v1 as components
-
-from st_custom_components import st_audiorec
 from pydub import AudioSegment
 import openai
-from audio_recorder_streamlit import audio_recorder
 
 
 from audiorecorder import audiorecorder
@@ -27,15 +18,6 @@ st.set_page_config(layout='wide',
                    page_icon='🤖')
 
  
-# Load some stuff up
-#### 
-# session_state = st.session_state
-
-# if 'OPENAI_API_KEY' in st.session_state and st.session_state['OPENAI_API_KEY'] not in (None, ''):   
-#     OPENAI_API_KEY = st.session_state['OPENAI_API_KEY']
-# else:
-#     OPENAI_API_KEY = ''
-
 
 
 # Start of the design
@@ -43,7 +25,7 @@ st.set_page_config(layout='wide',
 ### MAIN AREA
 ##############################################################################################################
 st.title('Chat GPT')
-# st.markdown(check_openai_api_key(st.session_state['OPENAI_API_KEY'])[0])
+# st.markdown(check_openai_api_key(st.secrets['OPENAI_API_KEY'])[0])
 
 
 col1, col2, col3 = st.columns([4, 4, 2])
@@ -83,7 +65,7 @@ if st.button('Clear'):
             del st.session_state[key]
         
         if key == 'gpt': 
-            st.session_state.gpt = Gpt(st.session_state['OPENAI_API_KEY'])
+            st.session_state.gpt = Gpt(st.secrets['OPENAI_API_KEY'])
 
 # st.write(st.session_state)
 
@@ -93,13 +75,13 @@ if st.button('Clear'):
 sidebar_api_input()
 
 if 'gpt' not in st.session_state:
-    st.session_state.gpt = Gpt(st.session_state['OPENAI_API_KEY'])
+    st.session_state.gpt = Gpt(st.secrets['OPENAI_API_KEY'])
 if 'user_input' not in st.session_state:
     st.session_state.user_input = ''
 if 'show_message_index' not in st.session_state:
     st.session_state.gpt.show_message_index = []
 
-
+st.session_state.gpt.messages = []
 for _ in range(3):
     st.write(' ')
 
@@ -128,7 +110,7 @@ prompt = df_prompts[df_prompts['act_as'] == test_area_prompt].iloc[0, 1] + ''
 
 
 
-### Model Inputs
+### Model Parameters
 ##############################################################################################################
 n_answers = input2.slider('How many answers do you want?', 
                         min_value=1, 
@@ -169,19 +151,7 @@ with col2:
         AudioSegment.from_file(io.BytesIO(byte_audio)).export('output_microphone.mp3', format='mp3')
         audio_file = open("output_microphone.mp3", "rb")
         transcript = openai.Audio.transcribe("whisper-1", audio_file)['text']
-        st.write(transcript)
-# audio_bytes = audio_recorder()
-# if audio_bytes:
-#     st.audio(audio_bytes, format="audio/wav")
-# # AUDIO RECORDING INPUT
-# with col2: 
-#     wav_audio_data = audio_recorder(pause_threshold=100)
-#     transcript = ''
-#     if wav_audio_data:
-#         wav_audio = AudioSegment.from_file(BytesIO(wav_audio_data), format="wav")
-#         wav_audio.export('output_microphone.mp3', format='mp3')
-#         audio_file = open("output_microphone.mp3", "rb")
-#         transcript = openai.Audio.transcribe("whisper-1", audio_file)['text']
+
 
 # TEXT INPUT
 value = transcript if transcript != '' else prompt
@@ -202,19 +172,11 @@ if 'conversation_chat_container' not in st.session_state:
 
 # Make the request and display chat
 ##############################################################################################################
-# print('\n')
-# print(f'User input: {st.session_state.user_input}')
-# print(f'User input must not be in  {"| - |".join([test_area_prompt, prompt, st.session_state.gpt.past_question])}')
 if st.session_state.user_input not in ('', test_area_prompt, prompt, st.session_state.gpt.past_question):
     st.session_state.gpt.add_user_input(st.session_state.user_input)
 
     # Loop to get one answer per iteration
     for nn in range(n_answers):
-
-
-        # Emptying conversation before displaying it
-        # print(f'{nn} - {"| - |".join(list(st.session_state.keys()))}')
-        # st.session_state.conversation_chat_container.empty()
         with st.session_state.conversation_chat_container.container():
             # Make the request
             print('Making the request...')
@@ -222,47 +184,22 @@ if st.session_state.user_input not in ('', test_area_prompt, prompt, st.session_
                 st.session_state.gpt.show_message_index += [1]
                 st.session_state.gpt.ask(st.session_state.user_input)
 
-            col_user, col_messages, col_checkbox = st.columns([1, 5, 2])
-            # full_col, _ = st.columns(2)
-            # for key, value in st.session_state.items():
-            #     if 'display_conv_message_' in key: 
-            #         del st.session_state[key]
-
-
+            col_user, col_messages, col_checkbox = st.columns([5, 2, 2])
             # Display conversation
             person = {'user': 'Me', 'assistant': 'Chat'}
             for message_index, message in enumerate(st.session_state.gpt.messages[::-1]):
                 message_content = message['content']
                 
-                # with col_user:
-                who = person[message['role']]
-                st.caption(f'{who}:')
+                with col_user:
+                    who = person[message['role']]
+                    st.caption(f'{who}:')
+                    st.write(message_content)
+                    st.markdown("<hr style='height:1px;border:none;color:#FFFFFF;background-color:#FFFFFF;' /> ", unsafe_allow_html=True)
 
-                # with col_messages:
-                st.write(message_content)
-
-                # with col_checkbox:
-                #     remove_message = st.checkbox('Remove from future prompts', value=False, key='display_conv_message_' + str(message_index))
-                #     if remove_message: 
-                #         st.session_state.gpt.messages.remove(message)
-                
-                # Add line:
-                # print('markdown now')
-                # with full_col: 
-                st.markdown("<hr style='height:1px;border:none;color:#FFA500;background-color:#FFA500;' /> ", unsafe_allow_html=True)
-                # st.write('this is some text')
 
             # Display answer
             # print(f'{st.session_state.gpt.show_message_index = } - last line')
 
-
-
-# Set up API KEY
-##############################################################################################################
-# if 'credentials.json' in os.listdir(os.getcwd()):
-#     with open('credentials.json', 'r') as f:
-#         credentials = json.load(f)
-#         st.session_state['OPENAI_API_KEY'] = credentials['OPENAI_API_KEY']
-
+# Write a cringe LinkedIn post about how I'm so excited about using chat GPT and whisper through their API in a streamlit web app.
 
 

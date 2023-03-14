@@ -1,0 +1,6 @@
+audiorecorder
+streamlit 
+pandas 
+pydub 
+openai 
+tiktoken
