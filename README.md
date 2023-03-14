@@ -17,7 +17,7 @@ My Ai Playground is a Streamlit web application designed to provide users with a
    cd pyTypeFast
    pip install -r requirements.txt
    ```
-3. Open `.streamlit/config` and add your API keys. You can find OpenAi one (here)[https://platform.openai.com/account/api-keys].
+3. Open `.streamlit/config` and add your API keys. You can find OpenAi one [here](https://platform.openai.com/account/api-keys).
 4. Launch the app 🚀
    ```sh
    streamlit run src/Home_Page.py
